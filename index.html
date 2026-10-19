@@ -179,17 +179,19 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
   <div class="row"><button class="pill" id="qX">Cancelar</button><button class="pill g" id="qSv">Salvar</button></div>
 </dialog>
 
-<script type="module">
-// ====== NUVEM (Firebase): cole aqui a configuração do seu projeto ======
-const firebaseConfig = {const firebaseConfig = {
+<script>
+// ====== NUVEM (Firebase): cole aqui só os valores do seu projeto, dentro das aspas ======
+window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyCoOpu5c-Pb47CURjOQdJPPM_b3tUG1QGQ",
   authDomain: "ensalamento-93364.firebaseapp.com",
   projectId: "ensalamento-93364",
-  storageBucket: "ensalamento-93364.firebasestorage.app",
-  messagingSenderId: "53271782206",
   appId: "1:53271782206:web:64291a31b39a2de2cac26f"
- };
-// =======================================================================
+};
+// ========================================================================================
+addEventListener("error",e=>{const s=document.getElementById("st");if(s)s.textContent="Erro no site: "+e.message;});
+</script>
+<script type="module">
+const firebaseConfig = window.FIREBASE_CONFIG || {};
 const $ = id => document.getElementById(id);
 const R = n => (n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
