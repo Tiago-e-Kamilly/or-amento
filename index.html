@@ -180,23 +180,15 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
 </dialog>
 
 <script type="module">
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
+// ====== NUVEM (Firebase): cole aqui a configuração do seu projeto ======
+const firebaseConfig = {const firebaseConfig = {
   apiKey: "AIzaSyCoOpu5c-Pb47CURjOQdJPPM_b3tUG1QGQ",
   authDomain: "ensalamento-93364.firebaseapp.com",
   projectId: "ensalamento-93364",
   storageBucket: "ensalamento-93364.firebasestorage.app",
   messagingSenderId: "53271782206",
   appId: "1:53271782206:web:64291a31b39a2de2cac26f"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+ };
 // =======================================================================
 const $ = id => document.getElementById(id);
 const R = n => (n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
