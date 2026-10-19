@@ -89,6 +89,10 @@ dialog h2{margin:0 0 6px}
 dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
 .row{display:flex;gap:8px;margin-top:18px;justify-content:flex-end}
 .sh{display:none}
+#lock{position:fixed;inset:0;z-index:50;background:linear-gradient(160deg,#4a1424,#8e2c46);display:grid;place-items:center;padding:20px}
+#lock[hidden]{display:none}
+#lock form{background:var(--card);border-radius:24px;padding:28px;width:min(92vw,360px);box-shadow:0 24px 70px rgba(0,0,0,.3)}
+#lock h2{font-size:24px;margin:0 0 4px}#le{color:#b03a4c;font-size:14px;min-height:20px;margin:8px 0 0}
 @media(max-width:860px){
  .app{grid-template-columns:1fr;padding:12px 12px 84px}
  .nav{position:fixed;top:auto;bottom:10px;left:10px;right:10px;height:auto;flex-direction:row;z-index:5;padding:6px;border-radius:20px;box-shadow:0 8px 30px rgba(74,20,36,.25)}
@@ -100,6 +104,10 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
 </style>
 </head>
 <body>
+<div id="lock"><form id="lf"><h2>Nosso casamento</h2><div class="sub" style="color:var(--mut)">Entre para ver o painel.</div>
+  <label for="lu">Usuário</label><input id="lu" autocomplete="username" autocapitalize="off" spellcheck="false">
+  <label for="lp">Senha</label><input id="lp" type="password" autocomplete="current-password" autocapitalize="off">
+  <div id="le"></div><button class="pill g" style="width:100%;margin-top:6px" type="submit">Entrar</button></form></div>
 <div class="app">
 <nav class="nav" id="nav">
   <div class="logo"><b>♥</b><span id="lname">Casamento</span></div>
@@ -155,7 +163,7 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
   <div><label for="sDate">Data do casamento</label><input type="date" id="sDate"></div>
   <div><label for="sBudget">Orçamento limite (R$)</label><input type="number" id="sBudget" min="0" step="100"></div>
   <div><label for="sCap">Posso guardar por mês (R$)</label><input type="number" id="sCap" min="0" step="50"></div></div>
-  <div class="sub" id="bTxt" style="margin-top:14px;color:var(--mut)"></div></div></section>
+  <div class="sub" id="bTxt" style="margin-top:14px;color:var(--mut)"></div><div class="row" style="justify-content:flex-start"><button class="pill sm" id="logout">Sair deste aparelho</button></div></div></section>
 <div class="card" style="margin-top:16px"><h2>Sincronização na nuvem</h2>
   <div class="sub" style="color:var(--mut)">Toque em “Gerar código”, depois em “Conectar”. No celular, digite o mesmo código e toque em “Conectar”. Quem tiver o código acessa os dados, então não compartilhe.</div>
   <label for="sCode">Código do casal</label><input id="sCode" autocapitalize="off" autocomplete="off" spellcheck="false">
@@ -200,6 +208,14 @@ const DEFAULT_CODE = "casal-d9u23cdabtcpmafw"; // código do casal: qualquer pes
 const $ = id => document.getElementById(id);
 const R = n => (n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const AUTH_HASH="536159d4d4f5649d0024bf915e52564a145dac8f8f54f370b482018a49a88aee";
+const sha=async t=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,"0")).join("");
+if(localStorage.getItem("wauth")===AUTH_HASH)$("lock").hidden=true;
+$("lf").onsubmit=async e=>{e.preventDefault();
+  if(await sha("wedding:"+$("lu").value.trim().toLowerCase()+":"+$("lp").value.trim().toLowerCase())===AUTH_HASH){localStorage.setItem("wauth",AUTH_HASH);$("lock").hidden=true;$("le").textContent="";}
+  else $("le").textContent="Usuário ou senha incorretos.";};
+$("logout").onclick=()=>{localStorage.removeItem("wauth");location.reload();};
+const sk=o=>JSON.stringify(o,(k,v)=>v&&typeof v==="object"&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(x=>[x,v[x]])):v);
 const CATS=["Fotografia e vídeo","Vestido e trajes","Buffet e bebidas","Espaço e decoração","Música e festa","Beleza","Convites e lembranças","Lua de mel","Outros"];
 const LBL={pago:"Pago",parcelando:"Parcelando",juntando:"Juntando",cotando:"Cotando",favorito:"★ Favorito",descartado:"Descartado"};
 const norm=d=>{d.settings=Object.assign({date:"",budget:0,cap:0,names:""},d.settings);d.items=d.items||[];d.quotes=d.quotes||[];return d;};
@@ -348,11 +364,12 @@ async function initCloud(){
       if(snap.metadata.hasPendingWrites)return;
       if(snap.exists()){
         const r=norm(snap.data());
-        if(JSON.stringify(r)!==JSON.stringify(S)){
-          if(first&&S.items.length&&!confirm("Já existem dados na nuvem com esse código. Substituir os deste aparelho pelos da nuvem?"))cloud.push(S);
+        if(sk(r)!==sk(S)){
+          if(first&&localStorage.getItem("wsynced")!==code&&S.items.length&&!confirm("Já existem dados na nuvem com esse código. Substituir os deste aparelho pelos da nuvem?"))cloud.push(S);
           else{S=r;save(false);}
         }
       }else if(first)cloud.push(S);
+      if(first)localStorage.setItem("wsynced",code);
       first=false;say("☁ Sincronizado");
     },e=>say("Erro na nuvem: "+(e.code==="permission-denied"?"permissão negada. Publique as regras do Firestore.":(e.code||e.message)),true));
   }
