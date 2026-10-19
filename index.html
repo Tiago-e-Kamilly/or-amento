@@ -164,10 +164,7 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
   <div><label for="sBudget">Orçamento limite (R$)</label><input type="number" id="sBudget" min="0" step="100"></div>
   <div><label for="sCap">Posso guardar por mês (R$)</label><input type="number" id="sCap" min="0" step="50"></div></div>
   <div class="sub" id="bTxt" style="margin-top:14px;color:var(--mut)"></div><div class="row" style="justify-content:flex-start"><button class="pill sm" id="logout">Sair deste aparelho</button></div></div></section>
-<div class="card" style="margin-top:16px"><h2>Sincronização na nuvem</h2>
-  <div class="sub" style="color:var(--mut)">Toque em “Gerar código”, depois em “Conectar”. No celular, digite o mesmo código e toque em “Conectar”. Quem tiver o código acessa os dados, então não compartilhe.</div>
-  <label for="sCode">Código do casal</label><input id="sCode" autocapitalize="off" autocomplete="off" spellcheck="false">
-  <div class="row" style="justify-content:flex-start"><button class="pill sm" id="genCode">Gerar código</button><button class="pill g sm" id="useCode">Conectar</button><button class="pill sm x" id="offCode">Desligar</button></div></div>
+
 </main>
 </div>
 <dialog id="dlg">
@@ -356,8 +353,8 @@ async function initCloud(){
   const say=(t,bad)=>{$("st").style.color=bad?"var(--red)":"";$("st").textContent=t;};
   function connect(code){
     if(unsub){unsub();unsub=null;}cloud=null;code=clean(code);
-    if(code.length<12){say("Código muito curto: use “Gerar código” em Ajustes",true);return;}
-    localStorage.setItem("wcode",code);$("sCode").value=code;
+    if(code.length<12){say("Código de sincronização inválido",true);return;}
+    localStorage.setItem("wcode",code);
     const ref=F.doc(db,"casamento",code);let first=true;
     cloud={push:d=>{say("Salvando…");F.setDoc(ref,JSON.parse(JSON.stringify(d))).then(()=>say("☁ Sincronizado"),e=>say("Erro ao salvar na nuvem: "+(e.code||e.message),true));}};
     unsub=F.onSnapshot(ref,snap=>{
@@ -373,9 +370,6 @@ async function initCloud(){
       first=false;say("☁ Sincronizado");
     },e=>say("Erro na nuvem: "+(e.code==="permission-denied"?"permissão negada. Publique as regras do Firestore.":(e.code||e.message)),true));
   }
-  $("genCode").onclick=()=>{const a=new Uint8Array(16);crypto.getRandomValues(a);$("sCode").value="casal-"+[...a].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join("");};
-  $("useCode").onclick=()=>connect($("sCode").value);
-  $("offCode").onclick=()=>{if(unsub)unsub();unsub=null;cloud=null;localStorage.setItem("wcode","off");$("sCode").value="";say("Nuvem desligada: dados só neste aparelho");};
   const saved=localStorage.getItem("wcode");
   if(saved==="off")say("Nuvem desligada: dados só neste aparelho");else connect(saved||DEFAULT_CODE);
 }
