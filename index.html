@@ -196,6 +196,7 @@ addEventListener("error",e=>{const s=document.getElementById("st");if(s)s.textCo
 </script>
 <script type="module">
 const firebaseConfig = window.FIREBASE_CONFIG || {};
+const DEFAULT_CODE = "casal-d9u23cdabtcpmafw"; // código do casal: qualquer pessoa com este link já entra sincronizada
 const $ = id => document.getElementById(id);
 const R = n => (n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -357,9 +358,9 @@ async function initCloud(){
   }
   $("genCode").onclick=()=>{const a=new Uint8Array(16);crypto.getRandomValues(a);$("sCode").value="casal-"+[...a].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join("");};
   $("useCode").onclick=()=>connect($("sCode").value);
-  $("offCode").onclick=()=>{if(unsub)unsub();unsub=null;cloud=null;localStorage.removeItem("wcode");$("sCode").value="";say("Nuvem desligada: dados só neste aparelho");};
+  $("offCode").onclick=()=>{if(unsub)unsub();unsub=null;cloud=null;localStorage.setItem("wcode","off");$("sCode").value="";say("Nuvem desligada: dados só neste aparelho");};
   const saved=localStorage.getItem("wcode");
-  if(saved)connect(saved);else say("Nuvem desligada: crie um código em Ajustes");
+  if(saved==="off")say("Nuvem desligada: dados só neste aparelho");else connect(saved||DEFAULT_CODE);
 }
 render();
 if(firebaseConfig.apiKey)initCloud().catch(e=>{$("st").style.color="var(--red)";$("st").textContent="Erro na nuvem: "+e.message;});
