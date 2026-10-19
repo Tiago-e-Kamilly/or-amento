@@ -108,7 +108,7 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
 <main>
 <div class="top">
   <div><h1 id="pt">Painel</h1><p id="ps">Tudo do casamento em um lugar só.</p></div>
-  <div class="sp"><span id="st"></span><button id="login" class="pill sm" hidden>Entrar com Google</button>
+  <div class="sp"><span id="st"></span>
     <button class="pill g" id="add">+ Novo gasto</button><button class="pill" id="addQ">+ Orçamento</button></div>
 </div>
 
@@ -156,6 +156,10 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
   <div><label for="sBudget">Orçamento limite (R$)</label><input type="number" id="sBudget" min="0" step="100"></div>
   <div><label for="sCap">Posso guardar por mês (R$)</label><input type="number" id="sCap" min="0" step="50"></div></div>
   <div class="sub" id="bTxt" style="margin-top:14px;color:var(--mut)"></div></div></section>
+<div class="card" style="margin-top:16px"><h2>Sincronização na nuvem</h2>
+  <div class="sub" style="color:var(--mut)">Toque em “Gerar código”, depois em “Conectar”. No celular, digite o mesmo código e toque em “Conectar”. Quem tiver o código acessa os dados, então não compartilhe.</div>
+  <label for="sCode">Código do casal</label><input id="sCode" autocapitalize="off" autocomplete="off" spellcheck="false">
+  <div class="row" style="justify-content:flex-start"><button class="pill sm" id="genCode">Gerar código</button><button class="pill g sm" id="useCode">Conectar</button><button class="pill sm x" id="offCode">Desligar</button></div></div>
 </main>
 </div>
 <dialog id="dlg">
@@ -328,21 +332,37 @@ $("imp").onclick=()=>{const f=document.createElement("input");f.type="file";f.ac
 
 async function initCloud(){
   const A=await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-  const Au=await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
   const F=await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-  const app=A.initializeApp(firebaseConfig),auth=Au.getAuth(app),db=F.getFirestore(app);
-  const off=()=>{cloud=null;$("login").hidden=false;$("st").textContent="Offline: entre para sincronizar";};
-  off();$("login").onclick=()=>Au.signInWithPopup(auth,new Au.GoogleAuthProvider());
-  Au.onAuthStateChanged(auth,u=>{
-    if(!u)return off();
-    $("login").hidden=true;const ref=F.doc(db,"casamento",u.uid),nm=(u.displayName||"").split(" ")[0];let first=true;
-    cloud={push:d=>{$("st").textContent="Salvando…";F.setDoc(ref,d).then(()=>$("st").textContent="☁ Sincronizado "+nm);}};
-    F.onSnapshot(ref,snap=>{if(snap.metadata.hasPendingWrites)return;
-      if(snap.exists()){S=norm(snap.data());save(false);}else if(first)cloud.push(S);
-      first=false;$("st").textContent="☁ Sincronizado "+nm;});});
+  const db=F.getFirestore(A.initializeApp(firebaseConfig));
+  let unsub=null;
+  const clean=c=>String(c||"").toLowerCase().replace(/[^a-z0-9-]/g,"");
+  const say=(t,bad)=>{$("st").style.color=bad?"var(--red)":"";$("st").textContent=t;};
+  function connect(code){
+    if(unsub){unsub();unsub=null;}cloud=null;code=clean(code);
+    if(code.length<12){say("Código muito curto: use “Gerar código” em Ajustes",true);return;}
+    localStorage.setItem("wcode",code);$("sCode").value=code;
+    const ref=F.doc(db,"casamento",code);let first=true;
+    cloud={push:d=>{say("Salvando…");F.setDoc(ref,JSON.parse(JSON.stringify(d))).then(()=>say("☁ Sincronizado"),e=>say("Erro ao salvar na nuvem: "+(e.code||e.message),true));}};
+    unsub=F.onSnapshot(ref,snap=>{
+      if(snap.metadata.hasPendingWrites)return;
+      if(snap.exists()){
+        const r=norm(snap.data());
+        if(JSON.stringify(r)!==JSON.stringify(S)){
+          if(first&&S.items.length&&!confirm("Já existem dados na nuvem com esse código. Substituir os deste aparelho pelos da nuvem?"))cloud.push(S);
+          else{S=r;save(false);}
+        }
+      }else if(first)cloud.push(S);
+      first=false;say("☁ Sincronizado");
+    },e=>say("Erro na nuvem: "+(e.code==="permission-denied"?"permissão negada. Publique as regras do Firestore.":(e.code||e.message)),true));
+  }
+  $("genCode").onclick=()=>{const a=new Uint8Array(16);crypto.getRandomValues(a);$("sCode").value="casal-"+[...a].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join("");};
+  $("useCode").onclick=()=>connect($("sCode").value);
+  $("offCode").onclick=()=>{if(unsub)unsub();unsub=null;cloud=null;localStorage.removeItem("wcode");$("sCode").value="";say("Nuvem desligada: dados só neste aparelho");};
+  const saved=localStorage.getItem("wcode");
+  if(saved)connect(saved);else say("Nuvem desligada: crie um código em Ajustes");
 }
 render();
-if(firebaseConfig.apiKey)initCloud().catch(e=>$("st").textContent="Erro na nuvem: "+e.message);
+if(firebaseConfig.apiKey)initCloud().catch(e=>{$("st").style.color="var(--red)";$("st").textContent="Erro na nuvem: "+e.message;});
 else $("st").textContent="Modo local: dados só neste aparelho";
 </script>
 </body>
