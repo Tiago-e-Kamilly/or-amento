@@ -45,6 +45,7 @@ button,input,select,textarea{font:inherit;color:var(--ink)}
 .cap{width:100%;max-width:56px;border-radius:999px;overflow:hidden;display:flex;flex-direction:column-reverse;transform-origin:bottom;animation:grow .9s cubic-bezier(.2,.8,.2,1) both;transition:filter .2s}
 .col:hover .cap{filter:brightness(1.1)}
 .cap i{display:block;width:100%}
+.sp0{background:#4fae8a}.col.sel .sp0{background:#2f8f6b}
 .sp1{background:var(--g2)}.sp2{background:repeating-linear-gradient(135deg,#d8c6ca 0 2px,#f5eced 2px 6px)}
 .col.sel .sp1{background:var(--g1)}.col.sel .sp2{background:repeating-linear-gradient(135deg,var(--g3) 0 2px,#f6dde4 2px 6px)}
 .tip{font-size:11px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:8px;padding:1px 6px;white-space:nowrap;margin-bottom:5px;box-shadow:0 2px 8px rgba(74,20,36,.12)}
@@ -52,7 +53,7 @@ button,input,select,textarea{font:inherit;color:var(--ink)}
 .lb{font-size:12px;color:var(--mut);margin-top:8px;text-transform:capitalize}.col.sel .lb{color:var(--ink);font-weight:700}
 .capl{position:absolute;left:0;right:0;border-top:1.5px dashed var(--red);pointer-events:none}
 @keyframes grow{from{transform:scaleY(0)}}
-.lg{display:flex;gap:16px;font-size:13px;color:var(--mut);margin-top:12px}
+.lg{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--mut);margin-top:12px}
 .lg span{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
 .mon .big{font-size:26px;font-weight:700;color:var(--g2);margin:6px 0}
 .mon .t{font-size:20px;font-weight:600;color:var(--g1)}.mon .t::first-letter{text-transform:uppercase}
@@ -129,7 +130,7 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
   </div>
   <div class="g4">
     <div class="card s2"><h2>Quanto vou gastar por mês</h2><div class="chart" id="chart"></div>
-      <div class="lg"><div><span style="background:var(--g2)"></span>Parcelas</div><div><span style="background:repeating-linear-gradient(135deg,#c4aab0 0 2px,#f5eced 2px 5px)"></span>Juntando</div><div><span style="background:var(--red)"></span>Passa da capacidade</div></div></div>
+      <div class="lg"><div><span style="background:#2f8f6b"></span>Pago</div><div><span style="background:var(--g2)"></span>Parcelas</div><div><span style="background:repeating-linear-gradient(135deg,#c4aab0 0 2px,#f5eced 2px 5px)"></span>Juntando</div><div><span style="background:var(--red)"></span>Passa da capacidade</div></div></div>
     <div class="card mon"><h2>Mês selecionado</h2><div class="t" id="mN"></div><div class="big" id="mV"></div><div class="sub" id="mS" style="color:var(--mut)"></div>
       <div id="mI" style="margin-top:10px;color:var(--g1);font-size:14px"></div></div>
     <div class="card"><h2>Pagamentos do mês</h2><div id="mL"></div></div>
@@ -176,7 +177,9 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
   <label for="fT">Valor total (R$)</label><input type="number" id="fT" min="0" step="0.01">
   <label for="fP">Já pago (R$)</label><input type="number" id="fP" min="0" step="0.01">
   <label for="fM">Parcela mensal (R$)</label><input type="number" id="fM" min="0" step="0.01">
-  <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><input type="checkbox" id="fK" style="width:auto;margin:0">Já paguei a parcela deste mês</label>
+  <label for="fI">Mês da 1ª parcela</label><input type="month" id="fI">
+  <label for="fF">Mês da última parcela</label><input type="month" id="fF">
+  <small style="color:var(--mut);display:block;margin-top:6px">Preenchendo os dois meses, o gráfico mostra o que foi pago em cada mês. Em “Já pago” coloque o total que você já pagou.</small>
   <div class="row"><button class="pill" id="dX">Cancelar</button><button class="pill g" id="dS">Salvar</button></div>
 </dialog>
 <dialog id="qd">
@@ -218,9 +221,14 @@ const CATS=["Fotografia e vídeo","Vestido e trajes","Buffet e bebidas","Espaço
 const LBL={pago:"Pago",parcelando:"Parcelando",juntando:"Juntando",cotando:"Cotando",favorito:"★ Favorito",descartado:"Descartado"};
 const norm=d=>{d.settings=Object.assign({date:"",budget:0,cap:0,names:""},d.settings);d.items=d.items||[];d.quotes=d.quotes||[];return d;};
 let S = norm(JSON.parse(localStorage.getItem("wedding")||"{}"));
-let editing=null, fromQ=null, qEd=null, sel=0, TL=[], cloud=null;
+let editing=null, fromQ=null, qEd=null, sel=0, selAbs=null, TL0=0, firstScroll=true, TL=[], cloud=null;
 document.querySelectorAll(".cats").forEach(s=>s.innerHTML=CATS.map(c=>`<option>${c}</option>`).join(""));
 const left=i=>Math.max(0,(i.total||0)-(i.paid||0));
+const ym=v=>{const [a,b]=String(v).split("-");return (+a)*12+(+b)-1;};
+const sched=i=>{if(!i.start)return null;const s=ym(i.start);let v=i.parcela||0,n;
+  if(i.end){n=ym(i.end)-s+1;if(n<1)return null;if(!v)v=(i.total||0)/n;}
+  else if(v>0)n=Math.max(1,Math.ceil((i.total||0)/v-1e-9));else return null;
+  return v>0?{s,n,v}:null;};
 const curKey=()=>{const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1);};
 const days=()=>S.settings.date?Math.ceil((new Date(S.settings.date+"T12:00")-new Date())/864e5):null;
 const monthsLeft=()=>Math.max(1,Math.ceil((days()??30)/30.4));
@@ -263,27 +271,44 @@ function render(){
 }
 
 function timeline(anim){
-  const now=new Date(),st=S.settings;let M=12;
+  const now=new Date(),st=S.settings,nowAbs=now.getFullYear()*12+now.getMonth();let M=12;
   if(st.date){const w=new Date(st.date+"T12:00");M=Math.min(48,Math.max(1,(w.getFullYear()-now.getFullYear())*12+w.getMonth()-now.getMonth()+1));}
-  TL=Array.from({length:M},(_,k)=>{const d=new Date(now.getFullYear(),now.getMonth()+k,1);return{nm:d.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}),ab:d.toLocaleDateString("pt-BR",{month:"short"}).replace(".",""),e:[],t:0,p:0,j:0};});
-  S.items.forEach(i=>{const l=left(i);if(!l||i.status==="pago")return;
-    if(i.status==="parcelando"&&i.parcela>0){let r=l;const s0=i.paidMonth===curKey()?1:0;for(let k=s0;k<M&&r>0;k++){const v=Math.min(i.parcela,r);TL[k].e.push({n:i.name,v,k:"parcelando"});r-=v;}
-      if(r>0)TL[M-1].e.push({n:i.name+" (saldo que passa do prazo)",v:r,k:"parcelando"});}
-    else TL.forEach(m=>m.e.push({n:i.name,v:l/M,k:"juntando"}));});
-  TL.forEach(m=>{m.p=m.e.filter(x=>x.k==="parcelando").reduce((a,x)=>a+x.v,0);m.j=m.e.filter(x=>x.k==="juntando").reduce((a,x)=>a+x.v,0);m.t=m.p+m.j;});
-  sel=Math.min(Math.max(sel,0),M-1);
+  const SC=S.items.map(i=>[i,(i.status==="parcelando"||i.status==="pago")?sched(i):null]);
+  let a0=nowAbs,a1=nowAbs+M-1;
+  SC.forEach(([i,c])=>{if(c){a0=Math.min(a0,c.s);a1=Math.max(a1,c.s+c.n-1);}});
+  a0=Math.max(a0,nowAbs-36);a1=Math.min(a1,nowAbs+119);
+  const N=a1-a0+1,off=nowAbs-a0;TL0=a0;
+  TL=Array.from({length:N},(_,k)=>{const d=new Date(Math.floor((a0+k)/12),(a0+k)%12,1);return{nm:d.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}),ab:d.toLocaleDateString("pt-BR",{month:"short"}).replace(".",""),e:[],t:0,p:0,j:0,d:0,o:0};});
+  const put=(abs,e)=>{const m=TL[abs-a0];if(m)m.e.push(e);};
+  SC.forEach(([i,c])=>{const l=left(i);
+    if(c){const cnt=Math.min(c.n,Math.ceil((i.paid||0)/c.v-1e-6));let pd=i.paid||0,r=l;
+      for(let j=0;j<c.n;j++){
+        if(j<cnt){const x=Math.min(c.v,pd);pd-=x;if(x>0)put(c.s+j,{n:i.name,v:x,k:"pago"});}
+        else if(r>0){const x=Math.min(c.v,r);r-=x;put(c.s+j,{n:i.name,v:x,k:"parcelando"});}
+      }
+      if(r>0.005)put(c.s+c.n-1,{n:i.name+" (saldo que passa do prazo)",v:r,k:"parcelando"});
+      return;}
+    if(!l||i.status==="pago")return;
+    if(i.status==="parcelando"&&i.parcela>0){let r=l;const s0=i.paidMonth===curKey()?1:0;for(let k=s0;k<M&&r>0;k++){const v=Math.min(i.parcela,r);put(nowAbs+k,{n:i.name,v,k:"parcelando"});r-=v;}
+      if(r>0)put(nowAbs+M-1,{n:i.name+" (saldo que passa do prazo)",v:r,k:"parcelando"});}
+    else for(let k=0;k<M;k++)put(nowAbs+k,{n:i.name,v:l/M,k:"juntando"});});
+  const sm=(m,k)=>m.e.filter(x=>x.k===k).reduce((a,x)=>a+x.v,0);
+  TL.forEach(m=>{m.d=sm(m,"pago");m.p=sm(m,"parcelando");m.j=sm(m,"juntando");m.t=m.d+m.p+m.j;m.o=m.p+m.j;});
+  if(selAbs===null)selAbs=nowAbs;
+  sel=Math.min(Math.max(selAbs-a0,0),N-1);
   const cap=st.cap||0,mx=Math.max(1,cap,...TL.map(m=>m.t)),H=170;
-  const sum=TL.reduce((a,m)=>a+m.t,0),pk=TL.reduce((a,m,k)=>m.t>TL[a].t?k:a,0),nO=cap?TL.filter(m=>m.t>cap).length:0;
+  const sum=TL.reduce((a,m)=>a+m.o,0),pk=TL.reduce((a,m,k)=>k>=off&&m.t>TL[a].t?k:a,off),nO=cap?TL.filter((m,k)=>k>=off&&m.t>cap).length:0;
   setNum("kMonth",sum/M);
   $("kM2").textContent=!cap?"defina sua capacidade em Ajustes":sum/M>cap?"acima da sua capacidade":"dentro da sua capacidade";
-  $("chart").innerHTML=`<div style="position:relative;display:flex;gap:10px;min-width:${M*56}px;width:100%">`+(cap?`<div class="capl" style="bottom:${28+cap/mx*H}px"></div>`:"")+TL.map((m,k)=>{
-    const pp=m.t?m.p/m.t*100:0;
-    return `<div class="col${k===sel?" sel":""}${cap&&m.t>cap?" over":""}" data-m="${k}" title="${m.nm}: ${R(m.t)}"><div class="bay">${k===sel?`<div class="tip">${R(m.t)}</div>`:""}<div class="cap" style="height:${m.t?Math.max(18,m.t/mx*H):18}px;${anim?`animation-delay:${k*45}ms`:"animation:none"}"><i class="sp1" style="height:${pp}%"></i><i class="sp2" style="height:${100-pp}%"></i></div></div><div class="lb">${k===M-1&&st.date?"💍":m.ab}</div></div>`;}).join("")+"</div>";
+  $("chart").innerHTML=`<div style="position:relative;display:flex;gap:10px;min-width:${N*56}px;width:100%">`+(cap?`<div class="capl" style="bottom:${28+cap/mx*H}px"></div>`:"")+TL.map((m,k)=>{
+    const pd=m.t?m.d/m.t*100:0,pp=m.t?m.p/m.t*100:0,pj=Math.max(0,100-pd-pp);
+    return `<div class="col${k===sel?" sel":""}${cap&&k>=off&&m.t>cap?" over":""}" data-m="${k}" title="${m.nm}: ${R(m.t)}"><div class="bay">${k===sel?`<div class="tip">${R(m.t)}</div>`:""}<div class="cap" style="height:${m.t?Math.max(18,m.t/mx*H):18}px;${anim?`animation-delay:${Math.min(k,20)*45}ms`:"animation:none"}"><i class="sp0" style="height:${pd}%"></i><i class="sp1" style="height:${pp}%"></i><i class="sp2" style="height:${pj}%"></i></div></div><div class="lb">${k===off+M-1&&st.date?"💍":m.ab}</div></div>`;}).join("")+"</div>";
+  const ch=$("chart");if(firstScroll&&ch.clientWidth>0){const c=ch.querySelector(".col.sel");if(c)ch.scrollLeft=Math.max(0,c.offsetLeft-ch.clientWidth/2+c.offsetWidth/2);firstScroll=false;}
   const m=TL[sel];
   $("mN").textContent=m.nm;$("mV").textContent=R(m.t);
   $("mS").textContent=cap?(m.t>cap?`Acima da sua capacidade em ${R(m.t-cap)}`:`Folga de ${R(cap-m.t)} neste mês`):"Informe quanto pode guardar por mês em Ajustes";
   $("mI").textContent=!sum?"Cadastre seus gastos e o painel se monta sozinho.":`Mês mais pesado: ${TL[pk].nm} (${R(TL[pk].t)}). `+(cap?(nO?`${nO} ${nO>1?"meses passam":"mês passa"} da capacidade.`:"Todos os meses cabem na capacidade."):"");
-  $("mL").innerHTML=m.e.length?[...m.e].sort((a,b)=>b.v-a.v).map(x=>`<div class="li"><div class="av">${esc(ini(x.n))}</div><div class="nm"><b>${esc(x.n)}</b><small>${x.k==="parcelando"?"parcela":"guardar"}</small></div><b>${R(x.v)}</b></div>`).join(""):'<div class="sub" style="color:var(--mut)">Nada a pagar neste mês.</div>';
+  $("mL").innerHTML=m.e.length?[...m.e].sort((a,b)=>b.v-a.v).map(x=>`<div class="li"><div class="av">${esc(ini(x.n))}</div><div class="nm"><b>${esc(x.n)}</b><small${x.k==="pago"?' style="color:#2f8f6b"':""}>${x.k==="parcelando"?"parcela":x.k==="pago"?"pago ✓":"guardar"}</small></div><b>${R(x.v)}</b></div>`).join(""):'<div class="sub" style="color:var(--mut)">Nada a pagar neste mês.</div>';
 }
 
 function tick(){
@@ -311,7 +336,7 @@ function quotes(total){
 
 function openDlg(id,pre){editing=id;const i=S.items.find(x=>x.id===id)||pre||{};
   $("dT").textContent=id?"Editar gasto":"Novo gasto";$("fN").value=i.name||"";$("fC").value=i.cat||CATS[0];$("fS").value=i.status||"parcelando";
-  $("fT").value=i.total??"";$("fP").value=i.paid??"";$("fM").value=i.parcela??"";$("fK").checked=i.paidMonth===curKey();$("dlg").showModal();}
+  $("fT").value=i.total??"";$("fP").value=i.paid??"";$("fM").value=i.parcela??"";$("fI").value=i.start||"";$("fF").value=i.end||"";$("dlg").showModal();}
 function openQ(id){qEd=id;const q=S.quotes.find(x=>x.id===id)||{};
   $("qT").textContent=id?"Editar orçamento":"Novo orçamento";$("qC").value=q.cat||CATS[0];$("qN").value=q.name||"";$("qV").value=q.value??"";$("qS").value=q.status||"cotando";$("qO").value=q.notes||"";$("qd").showModal();}
 
@@ -319,7 +344,9 @@ $("add").onclick=()=>openDlg(null);$("addQ").onclick=()=>openQ(null);
 $("dX").onclick=()=>{fromQ=null;$("dlg").close();};$("qX").onclick=()=>$("qd").close();
 $("dS").onclick=()=>{
   const o={id:editing||crypto.randomUUID(),name:$("fN").value.trim()||"Sem nome",cat:$("fC").value,status:$("fS").value,total:+$("fT").value||0,paid:+$("fP").value||0,parcela:+$("fM").value||0};
-  if($("fK").checked)o.paidMonth=curKey();
+  o.start=$("fI").value;o.end=$("fF").value;
+  const old=S.items.find(x=>x.id===editing);if(old&&old.paidMonth)o.paidMonth=old.paidMonth;
+  if(!o.parcela&&o.start&&o.end){const n=ym(o.end)-ym(o.start)+1;if(n>0&&o.total)o.parcela=Math.round(o.total/n*100)/100;}
   if(o.status==="pago")o.paid=o.total;
   const k=S.items.findIndex(x=>x.id===o.id);k>=0?S.items[k]=o:S.items.push(o);
   if(fromQ){S.quotes=S.quotes.filter(q=>q.id!==fromQ);fromQ=null;}
@@ -337,7 +364,7 @@ $("qs").onclick=e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.a){fromQ=q.id;openDlg(null,{name:q.name,cat:q.cat,total:q.value,status:"parcelando"});}
   if(b.dataset.qe)openQ(q.id);
   if(b.dataset.qd&&confirm("Excluir este orçamento?")){S.quotes=S.quotes.filter(x=>x.id!==q.id);save();}};
-$("chart").onclick=e=>{const c=e.target.closest(".col");if(!c)return;sel=+c.dataset.m;timeline(false);};
+$("chart").onclick=e=>{const c=e.target.closest(".col");if(!c)return;selAbs=TL0+ +c.dataset.m;timeline(false);};
 const T={p1:"Painel",p2:"Gastos",p3:"Orçamentos",p4:"Ajustes"};
 $("nav").onclick=e=>{const b=e.target.closest("button[data-p]");if(!b)return;
   document.querySelectorAll(".pg").forEach(x=>x.hidden=x.id!==b.dataset.p);
