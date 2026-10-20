@@ -133,14 +133,18 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
 </div>
 
 <section class="pg" id="p1">
-  <div class="g4"><div class="card kpi d hero"><small>Situação</small><div class="n" id="hH"></div><small id="hS"></small></div></div>
   <div id="alerts"></div>
   <div class="g4">
-    <div class="card kpi d"><small>Custo total previsto</small><div class="n" id="kTotal"></div><small id="kT2"></small><span class="ar">↗</span></div>
-    <div class="card kpi"><small>Já pago</small><div class="n" id="kPaid"></div><small id="kP2"></small><span class="ar">↗</span></div>
-    <div class="card kpi"><small>Falta pagar</small><div class="n" id="kLeft"></div><small id="kL2"></small><span class="ar">↗</span></div>
-    <div class="card kpi"><small>Média por mês</small><div class="n" id="kMonth"></div><small id="kM2"></small><span class="ar">↗</span></div>
+    <div class="card kpi d"><small>Valor total</small><div class="n" id="kTotal"></div><small id="kT2"></small><span class="ar">↗</span></div>
+    <div class="card kpi"><small>Valor já pago</small><div class="n" id="kPaid"></div><small id="kP2"></small><span class="ar">↗</span></div>
+    <div class="card kpi"><small>Valor a ser juntado</small><div class="n" id="kLeft"></div><small id="kL2"></small><span class="ar">↗</span></div>
+    <div class="card kpi"><small>Valor parcelado a ser pago</small><div class="n" id="kMonth"></div><small id="kM2"></small><span class="ar">↗</span></div>
   </div>
+  <div class="g4">
+    <div class="card s2"><h2>Gráficos · para onde vai o dinheiro</h2><div id="don"></div></div>
+    <div class="card s2"><h2>Fornecedores</h2><div id="sup"></div></div>
+  </div>
+  <div class="g4"><div class="card kpi d hero"><small>Situação</small><div class="n" id="hH"></div><small id="hS"></small></div></div>
   <div class="g4">
     <div class="card s2"><h2>Quanto vou gastar por mês</h2><div class="chart" id="chart"></div>
       <div class="lg"><div><span style="background:#2f8f6b"></span>Pago</div><div><span style="background:var(--g2)"></span>Parcelas</div><div><span style="background:repeating-linear-gradient(135deg,#c4aab0 0 2px,#f5eced 2px 5px)"></span>Juntando</div><div><span style="background:var(--red)"></span>Passa da capacidade</div></div></div>
@@ -149,7 +153,6 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
       <hr><h3>Pagamentos do mês</h3><div id="mL"></div></div>
   </div>
   <div class="g4">
-    <div class="card s2"><h2>Fornecedores</h2><div id="sup"></div></div>
     <div class="card gauge"><h2 style="text-align:left">Progresso</h2>
       <svg viewBox="0 0 200 110"><defs><pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f5eced"/><rect width="2" height="6" fill="#c9b3b8"/></pattern></defs>
         <path d="M14 100A86 86 0 0 1 186 100" pathLength="100" fill="none" stroke="#f5eced" stroke-width="20"/>
@@ -159,9 +162,6 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
       <div class="pc" id="gP">0%</div><div class="sub" style="color:var(--mut)">já pago</div>
       <div class="lg"><div><span style="background:#8e2c46"></span>Pago</div><div><span style="background:#4a1424"></span>Parcelando</div><div><span style="background:#c9b3b8"></span>Juntando</div></div></div>
     <div class="card cd"><h2>Contagem regressiva</h2><div class="t" id="cdT">--</div><small id="cdS">Defina a data em Ajustes</small></div>
-  </div>
-  <div class="g4">
-    <div class="card s2"><h2>Para onde vai o dinheiro</h2><div id="don"></div></div>
     <div class="card s2"><h2>Quem está pagando</h2><div id="who"></div></div>
   </div>
 </section>
@@ -188,12 +188,13 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
 <div id="toast" hidden></div>
 <dialog id="dlg">
   <h2 id="dT">Novo gasto</h2>
-  <label for="fN">Item / fornecedor</label><input id="fN">
-  <label for="fC">Categoria</label><select id="fC" class="cats"></select>
+  <label for="fN">Nome do fornecedor</label><input id="fN">
+  <label for="fC">Tipo (fotografia, buffet…)</label><select id="fC" class="cats"></select>
   <label for="fS">Situação</label>
   <select id="fS"><option value="parcelando">Parcelando todo mês</option><option value="juntando">Juntando até o dia</option><option value="pago">Pago</option></select>
   <label for="fT">Valor total (R$)</label><input type="number" id="fT" min="0" step="0.01">
-  <label for="fP">Já pago (R$)</label><input type="number" id="fP" min="0" step="0.01">
+  <label for="fP">Valor já pago (R$)</label><input type="number" id="fP" min="0" step="0.01">
+  <div class="tip2" id="fR" style="margin-top:8px"></div>
   <label for="fM">Parcela mensal (R$)</label><input type="number" id="fM" min="0" step="0.01">
   <label for="fI">Mês da 1ª parcela</label><input type="month" id="fI">
   <label for="fF">Mês da última parcela</label><input type="month" id="fF">
@@ -206,8 +207,10 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
 <dialog id="qd">
   <h2 id="qT">Novo orçamento</h2>
   <label for="qC">Categoria</label><select id="qC" class="cats"></select>
-  <label for="qN">Fornecedor</label><input id="qN">
-  <label for="qV">Valor orçado (R$)</label><input type="number" id="qV" min="0" step="0.01">
+  <label for="qN">O que é (ex.: fotógrafo, buffet)</label><input id="qN">
+  <label for="qV">Valor total (R$)</label><input type="number" id="qV" min="0" step="0.01">
+  <label for="qP">Valor que será parcelado (R$)</label><input type="number" id="qP" min="0" step="0.01">
+  <label for="qF">Como vai pagar</label><select id="qF"><option value="">A definir</option><option value="Juntando">Juntando</option><option value="Cartão">No cartão</option></select>
   <label for="qS">Situação</label><select id="qS"><option value="cotando">Cotando</option><option value="favorito">Favorito</option><option value="descartado">Descartado</option></select>
   <label for="qO">Observações (contato, condições)</label><textarea id="qO" rows="2"></textarea>
   <div class="row"><button class="pill" id="qX">Cancelar</button><button class="pill g" id="qSv">Salvar</button></div>
@@ -279,12 +282,13 @@ function donut(){const it=S.items,by={},PAL=["#8e2c46","#2f8f6b","#d98a9f","#a87
 function render(){
   const st=S.settings,it=S.items,ml=monthsLeft();
   const total=it.reduce((a,i)=>a+(i.total||0),0),paid=it.reduce((a,i)=>a+(i.paid||0),0),rest=Math.max(0,total-paid);
-  setNum("kTotal",total);setNum("kPaid",paid);setNum("kLeft",rest);
+  const jun=it.filter(i=>i.status==="juntando").reduce((a,i)=>a+left(i),0),par=it.filter(i=>i.status==="parcelando").reduce((a,i)=>a+left(i),0),nPar=it.filter(i=>i.status==="parcelando"&&left(i)>0).length;
+  setNum("kTotal",total);setNum("kPaid",paid);setNum("kLeft",jun);setNum("kMonth",par);
   const p=total?Math.round(paid/total*100):0;
   $("lname").textContent=st.names||"Casamento";
   $("ps").textContent=st.names?`${st.names}: tudo do casamento em um lugar só.`:"Tudo do casamento em um lugar só.";
   $("kT2").textContent=`${it.length} ${it.length===1?"gasto cadastrado":"gastos cadastrados"}`;
-  $("kP2").textContent=`${p}% do total`;$("kL2").textContent=`em ${ml} ${ml>1?"meses":"mês"}`;
+  $("kP2").textContent=`${p}% do total`;$("kL2").textContent=jun?`guardar ≈ ${R(jun/Math.max(1,ml))} por mês`:"nada a juntar";$("kM2").textContent=nPar?`${nPar} ${nPar>1?"fornecedores":"fornecedor"} em parcelas`:"nenhuma parcela pendente";
   const B=st.budget||0;
   $("bTxt").textContent=(B?(total>B?`Você passou do limite em ${R(total-B)}. `:`Dentro do limite: sobram ${R(B-total)} de ${R(B)}. `):"Defina um orçamento limite para acompanhar. ")+(total?`Reserva sugerida para imprevistos (10%): ${R(total*.1)}.`:"");
   const K={sNames:"names",sDate:"date",sBudget:"budget",sCap:"cap"};
@@ -293,7 +297,7 @@ function render(){
   const A=total?paid/total*100:0,Bp=total?pr/total*100:0,C=total?ju/total*100:0;
   [[A,0],[Bp,A],[C,A+Bp]].forEach(([l,o],k)=>{const e=$("g"+(k+1));e.style.strokeDasharray=`${l} 100`;e.style.strokeDashoffset=-o;});
   $("gP").textContent=p+"%";
-  $("sup").innerHTML=it.length?[...it].sort((a,b)=>left(b)-left(a)).slice(0,5).map(i=>`<div class="li"><div class="av">${esc(ini(i.name))}</div><div class="nm"><b>${esc(i.name)}</b><small>${esc(i.cat)}</small>${pb(i)}</div><span class="tag t-${i.status}">${LBL[i.status]||i.status}</span><b style="min-width:92px;text-align:right">${R(left(i))}</b></div>`).join(""):'<div class="sub" style="color:var(--mut)">Nenhum gasto ainda. Toque em “+ Novo gasto” para começar.</div>';
+  $("sup").innerHTML=it.length?[...it].sort((a,b)=>left(b)-left(a)).slice(0,6).map(i=>`<div class="li"><div class="av">${esc(ini(i.name))}</div><div class="nm"><b>${esc(i.name)}</b><small>${esc(i.cat)}</small>${pb(i)}</div><span class="tag t-${i.status}">${LBL[i.status]||i.status}</span><b style="min-width:92px;text-align:right">${R(left(i))}</b></div>`).join(""):'<div class="sub" style="color:var(--mut)">Nenhum gasto ainda. Toque em “+ Novo gasto” para começar.</div>';
   timeline(true);
   const f=$("fil").value,qq=$("q").value.trim().toLowerCase(),rows=it.filter(i=>(!f||i.status===f)&&(!qq||(i.name+" "+i.cat+" "+(i.obs||"")+" "+(i.by||"")).toLowerCase().includes(qq)));
   $("tb").innerHTML=rows.length?rows.map(i=>`<tr><td>${esc(i.name)}${i.by?`<small style="display:block;color:var(--mut)">Pago por ${esc(i.by)}</small>`:""}${i.obs?`<small style="display:block;color:var(--mut)">${esc(i.obs)}</small>`:""}${pb(i)}</td><td>${esc(i.cat)}</td><td><span class="tag t-${i.status}">${LBL[i.status]||i.status}</span></td>
@@ -331,8 +335,6 @@ function timeline(anim){
   sel=Math.min(Math.max(selAbs-a0,0),N-1);
   const cap=st.cap||0,mx=Math.max(1,cap,...TL.map(m=>m.t)),H=170;
   const sum=TL.reduce((a,m)=>a+m.o,0),pk=TL.reduce((a,m,k)=>k>=off&&m.t>TL[a].t?k:a,off),nO=cap?TL.filter((m,k)=>k>=off&&m.t>cap).length:0;
-  setNum("kMonth",sum/M);
-  $("kM2").textContent=!cap?"defina sua capacidade em Ajustes":sum/M>cap?"acima da sua capacidade":"dentro da sua capacidade";
   $("chart").innerHTML=`<div style="position:relative;display:flex;gap:10px;min-width:${N*56}px;width:100%">`+(cap?`<div class="capl" style="bottom:${28+cap/mx*H}px"></div>`:"")+TL.map((m,k)=>{
     const pd=m.t?m.d/m.t*100:0,pp=m.t?m.p/m.t*100:0,pj=Math.max(0,100-pd-pp);
     return `<div class="col${k===sel?" sel":""}${k<off?" past":""}${cap&&k>=off&&m.t>cap?" over":""}" data-m="${k}" title="${m.nm}: ${R(m.t)}"><div class="bay">${k===sel?`<div class="tip">${R(m.t)}</div>`:""}<div class="cap" style="height:${m.t?Math.max(18,m.t/mx*H):18}px;${anim?`animation-delay:${Math.min(k,20)*45}ms`:"animation:none"}"><i class="sp0" style="height:${pd}%"></i><i class="sp1" style="height:${pp}%"></i><i class="sp2" style="height:${pj}%"></i></div></div><div class="lb">${k===off+M-1&&st.date?"💍":m.ab}</div></div>`;}).join("")+"</div>";
@@ -374,16 +376,18 @@ function quotes(total){
   $("qs").innerHTML=CATS.filter(c=>Q.some(q=>q.cat===c)).map(c=>{
     const l=Q.filter(q=>q.cat===c),ok=l.filter(q=>q.status!=="descartado"),mn=ok.length?Math.min(...ok.map(q=>q.value)):null;
     return `<div class="card" style="margin-bottom:14px"><h2>${c}</h2>${l.sort((a,b)=>a.value-b.value).map(q=>`<div class="q${q.status==="descartado"?" off":""}">
-      <div class="n"><b>${esc(q.name)}</b> <span class="tag t-${q.status}">${LBL[q.status]}</span>${q.value===mn&&ok.length>1?' <span class="tag t-pago">menor preço</span>':""}${q.notes?`<small>${esc(q.notes)}</small>`:""}</div>
+      <div class="n"><b>${esc(q.name)}</b> <span class="tag t-${q.status}">${LBL[q.status]}</span>${q.value===mn&&ok.length>1?' <span class="tag t-pago">menor preço</span>':""}${q.parcel||q.how?`<small>${q.parcel?`Parcelado: ${R(q.parcel)}`:""}${q.parcel&&q.how?" · ":""}${q.how?esc(q.how):""}</small>`:""}${q.notes?`<small>${esc(q.notes)}</small>`:""}</div>
       <div class="v">${R(q.value)}</div>
       <button class="pill sm" data-f="${q.id}">${q.status==="favorito"?"Tirar ★":"★"}</button><button class="pill sm g" data-a="${q.id}">Aprovar</button><button class="pill sm" data-qe="${q.id}">Editar</button><button class="pill sm x" data-qd="${q.id}">Excluir</button></div>`).join("")}</div>`;}).join("");
 }
 
+const updR=()=>{$("fR").textContent="Valor a ser pago: "+R(Math.max(0,(+$("fT").value||0)-(+$("fP").value||0)));};
+$("fT").oninput=$("fP").oninput=()=>updR();
 function openDlg(id,pre){editing=id;const i=S.items.find(x=>x.id===id)||pre||{};
   $("dT").textContent=id?"Editar gasto":"Novo gasto";$("fN").value=i.name||"";$("fC").value=i.cat||CATS[0];$("fS").value=i.status||"parcelando";
-  $("fT").value=i.total??"";$("fP").value=i.paid??"";$("fM").value=i.parcela??"";$("fI").value=i.start||"";$("fF").value=i.end||"";$("fD").value=i.due||"";$("fB").value=i.by||"";$("fO").value=i.obs||"";$("dlg").showModal();}
+  $("fT").value=i.total??"";$("fP").value=i.paid??"";$("fM").value=i.parcela??"";$("fI").value=i.start||"";updR();$("fF").value=i.end||"";$("fD").value=i.due||"";$("fB").value=i.by||"";$("fO").value=i.obs||"";$("dlg").showModal();}
 function openQ(id){qEd=id;const q=S.quotes.find(x=>x.id===id)||{};
-  $("qT").textContent=id?"Editar orçamento":"Novo orçamento";$("qC").value=q.cat||CATS[0];$("qN").value=q.name||"";$("qV").value=q.value??"";$("qS").value=q.status||"cotando";$("qO").value=q.notes||"";$("qd").showModal();}
+  $("qT").textContent=id?"Editar orçamento":"Novo orçamento";$("qC").value=q.cat||CATS[0];$("qN").value=q.name||"";$("qV").value=q.value??"";$("qS").value=q.status||"cotando";$("qO").value=q.notes||"";$("qP").value=q.parcel??"";$("qF").value=q.how||"";$("qd").showModal();}
 
 $("add").onclick=()=>openDlg(null);$("addQ").onclick=()=>openQ(null);
 $("dX").onclick=()=>{fromQ=null;$("dlg").close();};$("qX").onclick=()=>$("qd").close();
@@ -397,7 +401,7 @@ $("dS").onclick=()=>{
   if(fromQ){S.quotes=S.quotes.filter(q=>q.id!==fromQ);fromQ=null;}
   $("dlg").close();save();};
 $("qSv").onclick=()=>{
-  const o={id:qEd||crypto.randomUUID(),cat:$("qC").value,name:$("qN").value.trim()||"Sem nome",value:+$("qV").value||0,status:$("qS").value,notes:$("qO").value.trim()};
+  const o={id:qEd||crypto.randomUUID(),cat:$("qC").value,name:$("qN").value.trim()||"Sem nome",value:+$("qV").value||0,status:$("qS").value,notes:$("qO").value.trim(),parcel:+$("qP").value||0,how:$("qF").value};
   const k=S.quotes.findIndex(x=>x.id===o.id);k>=0?S.quotes[k]=o:S.quotes.push(o);$("qd").close();save();};
 $("tb").onclick=e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.e)openDlg(b.dataset.e);
