@@ -176,6 +176,7 @@ dialog::backdrop{background:rgba(42,10,20,.55);backdrop-filter:blur(3px)}
   <label for="fT">Valor total (R$)</label><input type="number" id="fT" min="0" step="0.01">
   <label for="fP">Já pago (R$)</label><input type="number" id="fP" min="0" step="0.01">
   <label for="fM">Parcela mensal (R$)</label><input type="number" id="fM" min="0" step="0.01">
+  <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><input type="checkbox" id="fK" style="width:auto;margin:0">Já paguei a parcela deste mês</label>
   <div class="row"><button class="pill" id="dX">Cancelar</button><button class="pill g" id="dS">Salvar</button></div>
 </dialog>
 <dialog id="qd">
@@ -220,6 +221,7 @@ let S = norm(JSON.parse(localStorage.getItem("wedding")||"{}"));
 let editing=null, fromQ=null, qEd=null, sel=0, TL=[], cloud=null;
 document.querySelectorAll(".cats").forEach(s=>s.innerHTML=CATS.map(c=>`<option>${c}</option>`).join(""));
 const left=i=>Math.max(0,(i.total||0)-(i.paid||0));
+const curKey=()=>{const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1);};
 const days=()=>S.settings.date?Math.ceil((new Date(S.settings.date+"T12:00")-new Date())/864e5):null;
 const monthsLeft=()=>Math.max(1,Math.ceil((days()??30)/30.4));
 
@@ -265,7 +267,7 @@ function timeline(anim){
   if(st.date){const w=new Date(st.date+"T12:00");M=Math.min(48,Math.max(1,(w.getFullYear()-now.getFullYear())*12+w.getMonth()-now.getMonth()+1));}
   TL=Array.from({length:M},(_,k)=>{const d=new Date(now.getFullYear(),now.getMonth()+k,1);return{nm:d.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}),ab:d.toLocaleDateString("pt-BR",{month:"short"}).replace(".",""),e:[],t:0,p:0,j:0};});
   S.items.forEach(i=>{const l=left(i);if(!l||i.status==="pago")return;
-    if(i.status==="parcelando"&&i.parcela>0){let r=l;for(let k=0;k<M&&r>0;k++){const v=Math.min(i.parcela,r);TL[k].e.push({n:i.name,v,k:"parcelando"});r-=v;}
+    if(i.status==="parcelando"&&i.parcela>0){let r=l;const s0=i.paidMonth===curKey()?1:0;for(let k=s0;k<M&&r>0;k++){const v=Math.min(i.parcela,r);TL[k].e.push({n:i.name,v,k:"parcelando"});r-=v;}
       if(r>0)TL[M-1].e.push({n:i.name+" (saldo que passa do prazo)",v:r,k:"parcelando"});}
     else TL.forEach(m=>m.e.push({n:i.name,v:l/M,k:"juntando"}));});
   TL.forEach(m=>{m.p=m.e.filter(x=>x.k==="parcelando").reduce((a,x)=>a+x.v,0);m.j=m.e.filter(x=>x.k==="juntando").reduce((a,x)=>a+x.v,0);m.t=m.p+m.j;});
@@ -309,7 +311,7 @@ function quotes(total){
 
 function openDlg(id,pre){editing=id;const i=S.items.find(x=>x.id===id)||pre||{};
   $("dT").textContent=id?"Editar gasto":"Novo gasto";$("fN").value=i.name||"";$("fC").value=i.cat||CATS[0];$("fS").value=i.status||"parcelando";
-  $("fT").value=i.total??"";$("fP").value=i.paid??"";$("fM").value=i.parcela??"";$("dlg").showModal();}
+  $("fT").value=i.total??"";$("fP").value=i.paid??"";$("fM").value=i.parcela??"";$("fK").checked=i.paidMonth===curKey();$("dlg").showModal();}
 function openQ(id){qEd=id;const q=S.quotes.find(x=>x.id===id)||{};
   $("qT").textContent=id?"Editar orçamento":"Novo orçamento";$("qC").value=q.cat||CATS[0];$("qN").value=q.name||"";$("qV").value=q.value??"";$("qS").value=q.status||"cotando";$("qO").value=q.notes||"";$("qd").showModal();}
 
@@ -317,6 +319,7 @@ $("add").onclick=()=>openDlg(null);$("addQ").onclick=()=>openQ(null);
 $("dX").onclick=()=>{fromQ=null;$("dlg").close();};$("qX").onclick=()=>$("qd").close();
 $("dS").onclick=()=>{
   const o={id:editing||crypto.randomUUID(),name:$("fN").value.trim()||"Sem nome",cat:$("fC").value,status:$("fS").value,total:+$("fT").value||0,paid:+$("fP").value||0,parcela:+$("fM").value||0};
+  if($("fK").checked)o.paidMonth=curKey();
   if(o.status==="pago")o.paid=o.total;
   const k=S.items.findIndex(x=>x.id===o.id);k>=0?S.items[k]=o:S.items.push(o);
   if(fromQ){S.quotes=S.quotes.filter(q=>q.id!==fromQ);fromQ=null;}
@@ -326,7 +329,7 @@ $("qSv").onclick=()=>{
   const k=S.quotes.findIndex(x=>x.id===o.id);k>=0?S.quotes[k]=o:S.quotes.push(o);$("qd").close();save();};
 $("tb").onclick=e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.e)openDlg(b.dataset.e);
-  if(b.dataset.p){const i=S.items.find(x=>x.id===b.dataset.p);i.paid=Math.min(i.total,(i.paid||0)+i.parcela);if(i.paid>=i.total)i.status="pago";save();}
+  if(b.dataset.p){const i=S.items.find(x=>x.id===b.dataset.p);i.paid=Math.min(i.total,(i.paid||0)+i.parcela);i.paidMonth=curKey();if(i.paid>=i.total)i.status="pago";save();}
   if(b.dataset.d&&confirm("Excluir este gasto?")){S.items=S.items.filter(x=>x.id!==b.dataset.d);save();}};
 $("qs").onclick=e=>{const b=e.target.closest("button");if(!b)return;
   const q=S.quotes.find(x=>x.id===(b.dataset.f||b.dataset.a||b.dataset.qe||b.dataset.qd));
